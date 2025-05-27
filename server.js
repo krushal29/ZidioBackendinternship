@@ -2,6 +2,7 @@ import express from 'express'
 import connectDB from './Config/mongo.js';
 import dotenv from 'dotenv'
 import cors from 'cors'
+import userRoute from './routes/User.js';
 
 
 const port=80
@@ -21,7 +22,7 @@ connectDB();
 
 
 // For API
-// app.use('/api/user',userRoute);
+app.use('/api/user',userRoute);
 
 
 
