@@ -32,8 +32,6 @@ const signup = async (req, res) => {
             await userDetails.updateOne({ email: UserEmail }, { isLogin: true });
             return res.status(200).json({ data: true, message: "Data added!!", token, role: user.role });
         }
-
-
     } catch (e) {
         return res.status(500).json({ data: false, message: "Server Error!", error: e })
     }
@@ -41,7 +39,6 @@ const signup = async (req, res) => {
 
 const login = async (req, res) => {
   try {
-
         const { Email, Password } = req.body;
 
         if (!Email || !Password) return res.status(400).json({ data: false, message: "Please Fill all the Fields" });
@@ -88,7 +85,7 @@ const logout = async (req, res) => {
         const user = jwt.verify(token, process.env.JWT_TOKEN_KEY);
         await userDetails.updateOne({ email: user.id }, { isLogin: false });
 
-
+        
         return res.status(200).json({ data: true, message: "Logout Successfull!!!" });
     } catch (e) {
         return res.status(500).json({ data: false, message: "Server Error.Please try again!!",error:e });
