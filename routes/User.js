@@ -9,6 +9,6 @@ userRoute.post('/signup',signup);
 userRoute.post('/login',login);
 userRoute.post('/forgotPassword',forgotPassword);
 
-userRoute.get('/logout',verifyToken,logout);
+userRoute.post('/logout',verifyToken,logout);
 
 export default userRoute;
