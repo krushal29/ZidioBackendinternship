@@ -19,7 +19,16 @@ userRoute.get('/google/callback', passport.authenticate('google', {
   session: false,
 }), (req, res) => {
   // const token = jwt.sign({ id: req.user.email }, process.env.JWT_TOKEN_KEY);
-  const token = jwt.sign({ id: req.user._id }, process.env.JWT_TOKEN_KEY);
+  // const token = jwt.sign({ id: req.user._id }, process.env.JWT_TOKEN_KEY);
+  const token = jwt.sign(
+  {
+    id: req.user._id,
+    email: req.user.email,
+    name: req.user.Name
+  },
+  process.env.JWT_TOKEN_KEY
+);
+
   res.redirect(`http://localhost:5173/oauth-success?token=${token}&name=${req.user.Name}&email=${req.user.email}`);
 });
 
@@ -29,7 +38,16 @@ userRoute.get('/github/callback', passport.authenticate('github', {
   session: false,
 }), (req, res) => {
   // const token = jwt.sign({ id: req.user.email }, process.env.JWT_TOKEN_KEY);
-  const token = jwt.sign({ id: req.user._id }, process.env.JWT_TOKEN_KEY);
+  // const token = jwt.sign({ id: req.user._id }, process.env.JWT_TOKEN_KEY);
+  const token = jwt.sign(
+  {
+    id: req.user._id,
+    email: req.user.email,
+    name: req.user.Name
+  },
+  process.env.JWT_TOKEN_KEY
+);
+
   res.redirect(`http://localhost:5173/oauth-success?token=${token}&name=${req.user.Name}&email=${req.user.email}`);
 });
 

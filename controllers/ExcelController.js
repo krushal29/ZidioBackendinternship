@@ -33,7 +33,8 @@ const uploadExcelFile = async (req, res) => {
     }
 
     const UserEmail = req.user.id;
-    const user = await userDetails.findOne({ email: UserEmail });
+    // const user = await userDetails.findOne({ email: UserEmail });
+    const user = await userDetails.findById(UserEmail);
 
     if (!user) {
       return res.status(404).json({ message: "User not found!" });
@@ -93,8 +94,9 @@ const ExcelAllData = async (req, res) => {
       return res.status(401).json({ data: false, message: "Unauthorized: User email not found in request." });
     }
 
-    const user = await userDetails.findOne({ email: userEmail });
     // const user = await userDetails.findOne({ email: userEmail });
+    // const user = await userDetails.findOne({ email: userEmail });
+    const user = await userDetails.findById(userEmail);
 
     if (!user) {
       return res.status(404).json({ data: false, message: "User not found!" });

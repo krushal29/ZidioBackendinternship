@@ -2,9 +2,22 @@ import jwt from 'jsonwebtoken'
 import bcrypt from 'bcryptjs'
 import userDetails from '../models/UserModel.js';
 
-const createToken = (id) => {
-    return jwt.sign({ id }, process.env.JWT_TOKEN_KEY);
-}
+// const createToken = (id) => {
+//     return jwt.sign({ id }, process.env.JWT_TOKEN_KEY);
+// }
+
+const createToken = (user) => {
+  return jwt.sign(
+    {
+      id: user._id,
+      email: user.email,
+      name: user.Name
+    },
+    process.env.JWT_TOKEN_KEY
+  );
+};
+
+
 
 // const signup = async (req, res) => {
 //     try {
@@ -58,7 +71,9 @@ const signup = async (req, res) => {
         };
 
         const user = await userDetails.create(userData);
-        const token = createToken(user.email);
+        // const token = createToken(user.email);
+        const token = createToken(user);
+
 
         if (!user) {
             return res.status(500).json({ data: false, message: "Failed to create user. Please try again later." });
@@ -124,7 +139,9 @@ const login = async (req, res) => {
 
 
         if (ComparePassword) {
-  const token = createToken(user._id);
+  // const token = createToken(user._id);
+  const token = createToken(user); 
+
   await userDetails.updateOne({ email: Email }, { isLogin: true });
 
   
