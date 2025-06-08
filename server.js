@@ -4,6 +4,7 @@ import dotenv from 'dotenv'
 dotenv.config();
 import cors from 'cors'
 import userRoute from './routes/User.js';
+import adminRoute from './routes/Admin.js';
 import ExcelRouter from './routes/Excel.js';
 import connectCloudinary from './Config/cloudinary.js';
 import session from 'express-session';
@@ -38,6 +39,7 @@ connectCloudinary();
 // For API
 app.use('/api/user',userRoute);
 app.use('/api/excel',ExcelRouter);
+app.use('/api/admin', adminRoute);
 
 
 

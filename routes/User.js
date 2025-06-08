@@ -1,16 +1,17 @@
 import { Router } from "express";
 import verifyToken from "../middleware/verifyToken.js";
 import { forgotPassword, login, logout, signup } from "../controllers/userController.js";
+
 import passport from 'passport';
 import jwt from 'jsonwebtoken'
 
 
 const userRoute=Router();
+const adminRoute = Router();
 
 userRoute.post('/signup',signup);
 userRoute.post('/login',login);
 userRoute.post('/forgotPassword',forgotPassword);
-
 userRoute.post('/logout',verifyToken,logout);
 
 userRoute.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));

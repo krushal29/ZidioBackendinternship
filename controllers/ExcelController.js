@@ -4,6 +4,7 @@ import fs from 'fs';
 import axios from 'axios'
 import userDetails from '../models/UserModel.js';
 import ExcelDetails from '../models/ExcelDataModel.js';
+import Report from '../models/ReportModel.js'; 
 
 
 const analyzeData = async (url) => {
@@ -66,6 +67,12 @@ const uploadExcelFile = async (req, res) => {
     };
 
     const response = await ExcelDetails.create(ExcelData);
+
+    await Report.create({
+  title: req.file.originalname,
+  description: `Uploaded by ${user.Name || user.email}`, // customize as needed
+  isReviewed: false
+});
 
     return res.json({
       success: true,
