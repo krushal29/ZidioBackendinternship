@@ -4,27 +4,38 @@ import fs from 'fs';
 import axios from 'axios'
 import userDetails from '../models/UserModel.js';
 import ExcelDetails from '../models/ExcelDataModel.js';
-import Report from '../models/ReportModel.js'; 
+import Report from '../models/ReportModel.js';
+import OverViewOFFile from './AIController.js';
+
 
 
 const analyzeData = async (url) => {
-    try {
-        const response = await axios.get(url, { responseType: 'arraybuffer' });
-        const workbook = xlsx.read(response.data, { type: 'buffer' });
+  try {
+    const response = await axios.get(url, { responseType: 'arraybuffer' });
+    const workbook = xlsx.read(response.data, { type: 'buffer' });
 
-        const result = {};
-        workbook.SheetNames.forEach(sheetName => {
-            const worksheet = workbook.Sheets[sheetName];
-            const jsonData = xlsx.utils.sheet_to_json(worksheet, { defval: null });
-            result[sheetName] = jsonData;
-        });
+    const result = {};
+    workbook.SheetNames.forEach(sheetName => {
+      const worksheet = workbook.Sheets[sheetName];
+      const jsonData = xlsx.utils.sheet_to_json(worksheet, { defval: null });
+      result[sheetName] = jsonData;
+    });
 
-        return result;
-    } catch (e) {
-        console.error('Error fetching or parsing Excel file:', e.message);
-        throw new Error('Excel parsing failed');
-    }
+    return result;
+  } catch (e) {
+    console.error('Error fetching or parsing Excel file:', e.message);
+    throw new Error('Excel parsing failed');
+  }
 };
+
+
+const ColoumnVisulize = async (url) => {
+  try {
+
+  } catch (e) {
+    return res.status(500).json({ data: false, message: "Server Error.Please try again!", error: e.message })
+  }
+}
 
 
 const uploadExcelFile = async (req, res) => {
@@ -34,8 +45,8 @@ const uploadExcelFile = async (req, res) => {
     }
 
     const UserEmail = req.user.id;
-    // const user = await userDetails.findOne({ email: UserEmail });
-    const user = await userDetails.findById(UserEmail);
+    const user = await userDetails.findOne({ email: UserEmail });
+    // const user = await userDetails.findById(UserEmail);
 
     if (!user) {
       return res.status(404).json({ message: "User not found!" });
@@ -53,33 +64,42 @@ const uploadExcelFile = async (req, res) => {
     });
 
     const ProfileFile = uploadFile.secure_url;
-    fs.unlinkSync(Files); 
+    fs.unlinkSync(Files);
 
     const data = await analyzeData(ProfileFile);
 
-    const ExcelData = {
-      user_id: userId,
-      FileURl: ProfileFile,
-      FileName: req.file.originalname,
-      FileSize: uploadFile.bytes,
-      asset_id: uploadFile.asset_id,
-      ExcelData: data
-    };
+    if (data) {
+      const OverView = await OverViewOFFile(data);
+      if (OverView.data) {
+        const ExcelData = {
+          user_id: userId,
+          FileURl: ProfileFile,
+          FileName: req.file.originalname,
+          FileSize: uploadFile.bytes,
+          asset_id: uploadFile.asset_id,
+          ExcelData: data,
+          AIOverView:OverView.text
+        };
 
-    const response = await ExcelDetails.create(ExcelData);
+        const response = await ExcelDetails.create(ExcelData);
+        await Report.create({
+          title: req.file.originalname,
+          description: `Uploaded by ${user.Name || user.email}`, // customize as needed
+          isReviewed: false
+        });
 
-    await Report.create({
-  title: req.file.originalname,
-  description: `Uploaded by ${user.Name || user.email}`, // customize as needed
-  isReviewed: false
-});
-
-    return res.json({
-      success: true,
-      ProfileFile,
-      asset_id: uploadFile.asset_id,
-      display_name: req.file.originalname
-    });
+        return res.json({
+          success: true,
+          ProfileFile,
+          asset_id: uploadFile.asset_id,
+          display_name: req.file.originalname,
+          OverView:OverView.text
+        });
+      }
+      else{
+        return res.status(400).json({data:false})
+      }
+    }
 
   } catch (e) {
     console.error('Upload Error:', e);
@@ -92,9 +112,11 @@ const uploadExcelFile = async (req, res) => {
 };
 
 
+
+
 const ExcelAllData = async (req, res) => {
   try {
-    const userEmail = req.user.id; 
+    const userEmail = req.user.id;
     // const userEmail = req.user.email;
 
     if (!userEmail) {
@@ -141,4 +163,4 @@ const deleteExcelFile = async (req, res) => {
 
 
 
-export {uploadExcelFile,ExcelAllData, deleteExcelFile}
+export { uploadExcelFile, ExcelAllData, deleteExcelFile, ColoumnVisulize }
