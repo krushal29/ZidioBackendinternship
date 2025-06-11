@@ -1,6 +1,6 @@
 import { Router } from "express";
 import verifyToken from "../middleware/verifyToken.js";
-import { forgotPassword, login, logout, signup } from "../controllers/userController.js";
+import { forgotPassword, login, logout, signup, getUserProfile , changePassword} from "../controllers/userController.js";
 
 import passport from 'passport';
 import jwt from 'jsonwebtoken'
@@ -13,6 +13,9 @@ userRoute.post('/signup',signup);
 userRoute.post('/login',login);
 userRoute.post('/forgotPassword',forgotPassword);
 userRoute.post('/logout',verifyToken,logout);
+
+userRoute.get('/profile', verifyToken, getUserProfile);
+userRoute.post('/changePassword', verifyToken ,changePassword)
 
 userRoute.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 userRoute.get('/google/callback', passport.authenticate('google', {
