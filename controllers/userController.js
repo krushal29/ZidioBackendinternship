@@ -229,5 +229,37 @@ const logout = async (req, res) => {
     }
 }
 
+const getUserProfile = async (req, res) => {
+  try {
+    const user = await userDetails.findById(req.user.id).select('Name email');
+    if (!user) return res.status(404).json({ message: 'User not found' });
 
-export { signup, login, forgotPassword,logout }
+    return res.status(200).json({ user });
+  } catch (error) {
+    return res.status(500).json({ message: 'Failed to fetch user profile', error: error.message });
+  }
+};
+
+const changePassword = async(req, res)=>{
+   const { oldPassword, newPassword } = req.body;
+  const userId = req.user.id;
+
+  try {
+    const user = await userDetails.findById(userId);
+    const isMatch = await bcrypt.compare(oldPassword, user.Password);
+
+    if (!isMatch) return res.status(400).json({ message: "Old password is incorrect" });
+
+    const salt = await bcrypt.genSalt(10);
+    user.Password = await bcrypt.hash(newPassword, salt);
+    await user.save();
+
+    res.json({ message: "Password changed successfully" });
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+
+}
+
+
+export { signup, login, forgotPassword,logout, getUserProfile , changePassword}

@@ -202,6 +202,35 @@ const deleteExcelFile = async (req, res) => {
   }
 };
 
+const getUserStats = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const files = await ExcelDetails.find({ user_id: userId });
+
+    const totalFiles = files.length;
+    const totalSize = files.reduce((acc, file) => acc + file.FileSize, 0); // in bytes
+
+    // Placeholder for AI insights count — replace later when you store insights
+    const aiInsights = files.filter(file =>
+      file.ExcelData && Object.keys(file.ExcelData).length > 0
+    ).length;
+
+    return res.status(200).json({
+      success: true,
+      totalFiles,
+      totalSizeMB: (totalSize / (1024 * 1024)).toFixed(2),
+      aiInsights
+    });
+  } catch (error) {
+    console.error("Stats error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to get user stats",
+      error: error.message
+    });
+  }
+};
 
 
 const userFileName = async (req, res) => {
@@ -233,6 +262,8 @@ const userFileName = async (req, res) => {
 
 
 
+
+export {analyzeData, uploadExcelFile,ExcelAllData, deleteExcelFile, getUserStats}
 const fetchData = async (req, res) => {
   try {
     const { url, yAxis, xAxis } = req.body;
