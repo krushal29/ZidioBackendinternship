@@ -24,6 +24,14 @@ const ExcelDataSchema = new mongoose.Schema({
         type: Object,
         default: {},
     },
+    xAxis:{
+        type:Array,
+        default:[]
+    },
+    yAxis:{
+        type:Array,
+        default:[]
+    },
     AIOverView:{
         type:String,
         default:''

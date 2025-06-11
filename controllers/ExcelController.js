@@ -9,6 +9,7 @@ import OverViewOFFile from './AIController.js';
 
 
 
+
 const analyzeData = async (url) => {
   try {
     const response = await axios.get(url, { responseType: 'arraybuffer' });
@@ -29,13 +30,37 @@ const analyzeData = async (url) => {
 };
 
 
-const ColoumnVisulize = async (url) => {
+const ColoumnVisulize = async (url, xAxis, yAxis) => {
   try {
+    // const { url, xAxis, yAxis } = req.body;
+    if (!url || !xAxis || !yAxis) {
+      return res.status(400).json({ success: false, message: "Missing input fields." });
+    }
+
+
+    const response = await axios.get(url, { responseType: 'arraybuffer' })
+
+    // Load file from server
+    const workbook = xlsx.read(response.data, { type: 'buffer' })
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+    const data = xlsx.utils.sheet_to_json(sheet);
+
+    // Prepare chart data
+    const chartData = data.filter(row => row[xAxis] !== undefined && row[yAxis] !== undefined).map((row) => ({
+      x: row[xAxis],
+      y: row[yAxis]
+    }))
+
+
+
+    return { headers: Object.keys(data[0]), chartData }
 
   } catch (e) {
-    return res.status(500).json({ data: false, message: "Server Error.Please try again!", error: e.message })
+    return e.message
   }
 }
+
 
 
 const uploadExcelFile = async (req, res) => {
@@ -68,6 +93,19 @@ const uploadExcelFile = async (req, res) => {
 
     const data = await analyzeData(ProfileFile);
 
+    const firstRow = data.Sheet1[0];
+    const xAxis = []
+    const yAxis = []
+
+    for (const key in firstRow) {
+      if (typeof firstRow[key] == "string") {
+        xAxis.push(key)
+      }
+      if (typeof firstRow[key] == 'number') {
+        yAxis.push(key)
+      }
+    }
+
     if (data) {
       const OverView = await OverViewOFFile(data);
       if (OverView.data) {
@@ -78,10 +116,13 @@ const uploadExcelFile = async (req, res) => {
           FileSize: uploadFile.bytes,
           asset_id: uploadFile.asset_id,
           ExcelData: data,
-          AIOverView:OverView.text
+          xAxis,
+          yAxis
         };
 
         const response = await ExcelDetails.create(ExcelData);
+
+
         await Report.create({
           title: req.file.originalname,
           description: `Uploaded by ${user.Name || user.email}`, // customize as needed
@@ -93,11 +134,13 @@ const uploadExcelFile = async (req, res) => {
           ProfileFile,
           asset_id: uploadFile.asset_id,
           display_name: req.file.originalname,
-          OverView:OverView.text
+          OverView: OverView.text,
+          xAxis,
+          yAxis
         });
       }
-      else{
-        return res.status(400).json({data:false})
+      else {
+        return res.status(400).json({ data: false })
       }
     }
 
@@ -161,6 +204,55 @@ const deleteExcelFile = async (req, res) => {
 
 
 
+const userFileName = async (req, res) => {
+  try {
+    const userEmail = req.user.id;
+    // const userEmail = req.user.email;
+
+    if (!userEmail) {
+      return res.status(401).json({ data: false, message: "Unauthorized: User email not found in request." });
+    }
+
+    const user = await userDetails.findOne({ email: userEmail });
+    // const user = await userDetails.findOne({ email: userEmail });
+    // const user = await userDetails.findById(userEmail);
+
+    const ExcelData = await ExcelDetails.find({ user_id: user._id }).sort({ updatedAt: -1 })
+    let FileName = {}
+
+    FileName = ExcelData.map((data, index) => ({
+      "FileName": data.FileName, "_id": data._id
+    }))
+
+    res.json({ data: true, FileName })
+
+  } catch (e) {
+    return res.status(500).json({ success: false, message: "Server error", error: e.message });
+  }
+}
 
 
-export { uploadExcelFile, ExcelAllData, deleteExcelFile, ColoumnVisulize }
+
+const fetchData = async (req, res) => {
+  try {
+    const { url, yAxis, xAxis } = req.body;
+
+    if (xAxis && yAxis && url) {
+      const data = await ColoumnVisulize(url, xAxis, yAxis);
+      return res.status(200).json({ data: false, data })
+    }
+    else {
+      const data = await analyzeData(url);
+      return res.status(200).json({ data: false, data })
+    }
+  } catch (e) {
+    return res.status(500).json({ success: false, message: "Server error", error: e.message });
+  }
+}
+
+
+
+
+
+
+export { uploadExcelFile, ExcelAllData, deleteExcelFile, ColoumnVisulize, userFileName, fetchData }
