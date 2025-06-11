@@ -213,15 +213,15 @@ const userFileName = async (req, res) => {
       return res.status(401).json({ data: false, message: "Unauthorized: User email not found in request." });
     }
 
-    const user = await userDetails.findOne({ email: userEmail });
     // const user = await userDetails.findOne({ email: userEmail });
-    // const user = await userDetails.findById(userEmail);
+    // const user = await userDetails.findOne({ email: userEmail });
+    const user = await userDetails.findById(userEmail);
 
     const ExcelData = await ExcelDetails.find({ user_id: user._id }).sort({ updatedAt: -1 })
     let FileName = {}
 
     FileName = ExcelData.map((data, index) => ({
-      "FileName": data.FileName, "_id": data._id
+      "FileName": data.FileName, "_id": data._id,xAxis:data.xAxis,yAxis:data.yAxis
     }))
 
     res.json({ data: true, FileName })
