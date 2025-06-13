@@ -29,6 +29,57 @@ const analyzeData = async (url) => {
 };
 
 
+const analyze3DData = async (req, res) => {
+  try {
+    const { url, xAxis, yAxis, zAxis } = req.body;
+
+    if (!url || !xAxis || !yAxis || !zAxis) {
+      return res.status(400).json({ success: false, message: "Missing required fields (url, xAxis, yAxis, zAxis)." });
+    }
+
+    
+    const response = await axios.get(url, { responseType: 'arraybuffer' });
+    const workbook = xlsx.read(response.data, { type: 'buffer' });
+
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+    const data = xlsx.utils.sheet_to_json(worksheet);
+
+    // Verify xAxis, yAxis, zAxis exist in the sheet columns
+    const firstRow = data[0] || {};
+    const availableColumns = Object.keys(firstRow);
+
+    const missingColumns = [xAxis, yAxis, zAxis].filter(col => !availableColumns.includes(col));
+    if (missingColumns.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Columns ${missingColumns.join(", ")} not found. Available columns: ${availableColumns.join(", ")}`
+      });
+    }
+
+    const processedData = data.map(row => ({
+      x: row[xAxis],
+      y: row[yAxis],
+      z: row[zAxis]
+    }));
+
+    return res.status(200).json({
+      success: true,
+      message: "3D data extracted successfully.",
+      processedData
+    });
+
+  } catch (e) {
+    console.error("Error analyzing 3D data:", e);
+    return res.status(500).json({
+      success: false,
+      message: "Server Error",
+      error: e.message
+    });
+  }
+};
+
+
 
 const analyzeDataFromPath = (filePath) => {
   try {
@@ -116,7 +167,7 @@ const uploadExcelFile = async (req, res) => {
     });
 
     const ProfileFile = uploadFile.secure_url;
-    fs.unlinkSync(Files); 
+    fs.unlinkSync(Files); // cleanup
 
     const OverView = await OverViewOFFile(data);
     if (!OverView?.data) {
@@ -223,6 +274,7 @@ const getUserStats = async (req, res) => {
       file.ExcelData && Object.keys(file.ExcelData).length > 0
     ).length;
 
+
     return res.status(200).json({
       success: true,
       totalFiles,
@@ -257,7 +309,7 @@ const userFileName = async (req, res) => {
     let FileName = {}
 
     FileName = ExcelData.map((data, index) => ({
-      "FileName": data.FileName, "_id": data._id
+      "FileName": data.FileName, "_id": data._id, xAxis: data.xAxis, yAxis: data.yAxis
     }))
 
     res.json({ data: true, FileName })
@@ -266,7 +318,6 @@ const userFileName = async (req, res) => {
     return res.status(500).json({ success: false, message: "Server error", error: e.message });
   }
 }
-
 
 const fetchData = async (req, res) => {
   try {
@@ -326,26 +377,11 @@ const fetchData = async (req, res) => {
     console.error("FetchData error:", e.message);
     return res.status(500).json({ success: false, message: "Server error", error: e.message });
   }
-};
+}
 
 
 
-const getSingleExcelFile = async (req, res) => {
-  const { fileId } = req.params;
-
-  try {
-    const file = await ExcelDetails.findById(fileId);
-
-    if (!file) {
-      return res.status(404).json({ success: false, message: "File not found" });
-    }
-
-    return res.status(200).json({ success: true, data: file });
-  } catch (error) {
-    console.error("Error fetching file:", error);
-    return res.status(500).json({ success: false, message: "Server error", error });
-  }
-};
 
 
-export {analyzeData, uploadExcelFile,ExcelAllData, deleteExcelFile, getUserStats,ColoumnVisulize, userFileName, fetchData, getSingleExcelFile}
+
+export { uploadExcelFile, ExcelAllData, deleteExcelFile, ColoumnVisulize, userFileName, fetchData , getUserStats, analyze3DData}

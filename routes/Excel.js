@@ -1,6 +1,5 @@
 import { Router } from "express";
-import { uploadExcelFile, ExcelAllData, deleteExcelFile , getUserStats, getSingleExcelFile} from "../controllers/ExcelController.js";
-import { userFileName, fetchData, ColoumnVisulize } from "../controllers/ExcelController.js";
+import { uploadExcelFile, ExcelAllData, deleteExcelFile, userFileName, fetchData, getUserStats, analyze3DData } from "../controllers/ExcelController.js";
 import upload from "../middleware/multer.js";
 import verifyToken from "../middleware/verifyToken.js";
 // import OverViewOFFile from "../controllers/AIController.js";
@@ -15,6 +14,9 @@ const ExcelRouter = Router();
 ExcelRouter.post('/uploadExcelFile', verifyToken, upload.single("File"), uploadExcelFile);
 ExcelRouter.post('/ColoumnVisulize', verifyToken, ColoumnVisulize)
 ExcelRouter.post('/fetchData',verifyToken,fetchData)
+ExcelRouter.post('/analyze3DData',verifyToken,analyze3DData)
+
+
 
 ExcelRouter.get('/ExcelAllData', verifyToken, ExcelAllData);
 ExcelRouter.get('/userFileName',verifyToken,userFileName);

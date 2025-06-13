@@ -32,6 +32,10 @@ const ExcelDataSchema = new mongoose.Schema({
         type:Array,
         default:[]
     },
+    zAxis:{
+        type:Array,
+        default:[]
+    },
     AIOverView:{
         type:String,
         default:''
