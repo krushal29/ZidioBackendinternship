@@ -21,6 +21,7 @@ app.use(express.json({limit:'50mb'}));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(cors());
 
+
 app.use(session({
   secret: 'someSecretKey',
   resave: false,
@@ -34,7 +35,6 @@ app.use(passport.session());
 //Database connect
 connectDB();
 connectCloudinary();
-
 
 
 // For API

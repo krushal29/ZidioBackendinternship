@@ -5,13 +5,12 @@ import axios from 'axios'
 import userDetails from '../models/UserModel.js';
 import ExcelDetails from '../models/ExcelDataModel.js';
 import Report from '../models/ReportModel.js';
-import OverViewOFFile from './AIController.js';
-
-
-
+// import OverViewOFFile from './AIController.js';
+import OverViewOFFile from './aiGemini.js';
 
 const analyzeData = async (url) => {
   try {
+    console.log("Fetching Excel from URL:", url);
     const response = await axios.get(url, { responseType: 'arraybuffer' });
     const workbook = xlsx.read(response.data, { type: 'buffer' });
 
@@ -24,20 +23,39 @@ const analyzeData = async (url) => {
 
     return result;
   } catch (e) {
-    console.error('Error fetching or parsing Excel file:', e.message);
+    console.error('Excel parsing failed:', e.message);
     throw new Error('Excel parsing failed');
   }
 };
 
 
+
+const analyzeDataFromPath = (filePath) => {
+  try {
+    const workbook = xlsx.readFile(filePath);
+    const result = {};
+
+    workbook.SheetNames.forEach(sheetName => {
+      const worksheet = workbook.Sheets[sheetName];
+      const jsonData = xlsx.utils.sheet_to_json(worksheet, { defval: null });
+      result[sheetName] = jsonData;
+    });
+
+    return result;
+  } catch (e) {
+    console.error("Local Excel parsing failed:", e.message);
+    throw new Error("Failed to parse local Excel file");
+  }
+};
+
+
+
 const ColoumnVisulize = async (url, xAxis, yAxis) => {
   try {
-    // const { url, xAxis, yAxis } = req.body;
+   // const { url, xAxis, yAxis } = req.body;
     if (!url || !xAxis || !yAxis) {
       return res.status(400).json({ success: false, message: "Missing input fields." });
     }
-
-
     const response = await axios.get(url, { responseType: 'arraybuffer' })
 
     // Load file from server
@@ -51,16 +69,12 @@ const ColoumnVisulize = async (url, xAxis, yAxis) => {
       x: row[xAxis],
       y: row[yAxis]
     }))
-
-
-
     return { headers: Object.keys(data[0]), chartData }
 
   } catch (e) {
     return e.message
   }
 }
-
 
 
 const uploadExcelFile = async (req, res) => {
@@ -70,82 +84,76 @@ const uploadExcelFile = async (req, res) => {
     }
 
     const UserEmail = req.user.id;
-    const user = await userDetails.findOne({ email: UserEmail });
-    // const user = await userDetails.findById(UserEmail);
+    const user = await userDetails.findById(UserEmail);
+    if (!user) return res.status(404).json({ message: "User not found!" });
 
-    if (!user) {
-      return res.status(404).json({ message: "User not found!" });
-    }
-
-    const userId = user._id;
     const Files = req.file?.path;
-
     if (!Files) {
       return res.status(400).json({ data: false, message: "Please upload a file!" });
     }
 
+  
+    const data = analyzeDataFromPath(Files);
+
+    const firstRow = data.Sheet1?.[0];
+
+    if (!firstRow) {
+      fs.unlinkSync(Files);
+      return res.status(400).json({ data: false, message: "No rows in Excel file." });
+    }
+
+    const xAxis = [];
+    const yAxis = [];
+
+    for (const key in firstRow) {
+      if (typeof firstRow[key] === "string") xAxis.push(key);
+      if (typeof firstRow[key] === "number") yAxis.push(key);
+    }
+
+   
     const uploadFile = await cloudinary.uploader.upload(Files, {
-      resource_type: "raw"
+      resource_type: "raw",
     });
 
     const ProfileFile = uploadFile.secure_url;
-    fs.unlinkSync(Files);
+    fs.unlinkSync(Files); 
 
-    const data = await analyzeData(ProfileFile);
-
-    const firstRow = data.Sheet1[0];
-    const xAxis = []
-    const yAxis = []
-
-    for (const key in firstRow) {
-      if (typeof firstRow[key] == "string") {
-        xAxis.push(key)
-      }
-      if (typeof firstRow[key] == 'number') {
-        yAxis.push(key)
-      }
+    const OverView = await OverViewOFFile(data);
+    if (!OverView?.data) {
+      return res.status(400).json({ data: false, message: "Failed to generate AI overview" });
     }
 
-    if (data) {
-      const OverView = await OverViewOFFile(data);
-      if (OverView.data) {
-        const ExcelData = {
-          user_id: userId,
-          FileURl: ProfileFile,
-          FileName: req.file.originalname,
-          FileSize: uploadFile.bytes,
-          asset_id: uploadFile.asset_id,
-          ExcelData: data,
-          xAxis,
-          yAxis
-        };
+    const ExcelData = {
+      user_id: user._id,
+      FileURl: ProfileFile,
+      FileName: req.file.originalname,
+      FileSize: uploadFile.bytes,
+      asset_id: uploadFile.asset_id,
+      ExcelData: data,
+      xAxis,
+      yAxis
+    };
 
-        const response = await ExcelDetails.create(ExcelData);
+    await ExcelDetails.create(ExcelData);
 
+    await Report.create({
+      title: req.file.originalname,
+      description: `Uploaded by ${user.Name || user.email}`,
+      isReviewed: false
+    });
 
-        await Report.create({
-          title: req.file.originalname,
-          description: `Uploaded by ${user.Name || user.email}`, // customize as needed
-          isReviewed: false
-        });
-
-        return res.json({
-          success: true,
-          ProfileFile,
-          asset_id: uploadFile.asset_id,
-          display_name: req.file.originalname,
-          OverView: OverView.text,
-          xAxis,
-          yAxis
-        });
-      }
-      else {
-        return res.status(400).json({ data: false })
-      }
-    }
+    return res.json({
+      success: true,
+      ProfileFile,
+      asset_id: uploadFile.asset_id,
+      display_name: req.file.originalname,
+      OverView: OverView.text,
+      xAxis,
+      yAxis
+    });
 
   } catch (e) {
-    console.error('Upload Error:', e);
+    console.error("Upload Error:", e);
     return res.status(500).json({
       data: false,
       message: "Server Error. Please try again!",
@@ -153,7 +161,6 @@ const uploadExcelFile = async (req, res) => {
     });
   }
 };
-
 
 
 
@@ -209,9 +216,9 @@ const getUserStats = async (req, res) => {
     const files = await ExcelDetails.find({ user_id: userId });
 
     const totalFiles = files.length;
-    const totalSize = files.reduce((acc, file) => acc + file.FileSize, 0); // in bytes
+    const totalSize = files.reduce((acc, file) => acc + file.FileSize, 0); 
 
-    // Placeholder for AI insights count — replace later when you store insights
+  
     const aiInsights = files.filter(file =>
       file.ExcelData && Object.keys(file.ExcelData).length > 0
     ).length;
@@ -242,9 +249,9 @@ const userFileName = async (req, res) => {
       return res.status(401).json({ data: false, message: "Unauthorized: User email not found in request." });
     }
 
-    const user = await userDetails.findOne({ email: userEmail });
     // const user = await userDetails.findOne({ email: userEmail });
-    // const user = await userDetails.findById(userEmail);
+    // const user = await userDetails.findOne({ email: userEmail });
+    const user = await userDetails.findById(userEmail);
 
     const ExcelData = await ExcelDetails.find({ user_id: user._id }).sort({ updatedAt: -1 })
     let FileName = {}
@@ -261,29 +268,84 @@ const userFileName = async (req, res) => {
 }
 
 
-
-
-export {analyzeData, uploadExcelFile,ExcelAllData, deleteExcelFile, getUserStats}
 const fetchData = async (req, res) => {
   try {
     const { url, yAxis, xAxis } = req.body;
 
-    if (xAxis && yAxis && url) {
-      const data = await ColoumnVisulize(url, xAxis, yAxis);
-      return res.status(200).json({ data: false, data })
+    if (!url) {
+      return res.status(400).json({ success: false, message: "Missing file URL." });
     }
-    else {
-      const data = await analyzeData(url);
-      return res.status(200).json({ data: false, data })
+
+    const response = await axios.get(url, { responseType: 'arraybuffer' });
+    const workbook = xlsx.read(response.data, { type: 'buffer' });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const data = xlsx.utils.sheet_to_json(sheet, { defval: null });
+
+    if (xAxis && yAxis) {
+      // 2-axis chart (bar, line, scatter, etc.)
+      const chartData = data
+        .filter(row => row[xAxis] !== undefined && row[yAxis] !== undefined)
+        .map(row => ({ x: row[xAxis], y: row[yAxis] }));
+      return res.status(200).json({ data: true, chartData, headers: Object.keys(data[0]) });
     }
+
+    if (xAxis && !yAxis) {
+      // Pie/Donut chart: one axis only
+      const counts = {};
+      data.forEach(row => {
+        const value = row[xAxis];
+        if (value !== null && value !== undefined) {
+          counts[value] = (counts[value] || 0) + 1;
+        }
+      });
+
+      const labels = Object.keys(counts);
+      const values = Object.values(counts);
+      const total = values.reduce((acc, val) => acc + val, 0);
+
+      const chartData = labels.map(label => ({
+        x: label,
+        y: counts[label],
+        percentage: ((counts[label] / total) * 100).toFixed(2)
+      }));
+
+      return res.status(200).json({ data: true, chartData });
+    }
+
+    const firstRow = data[0];
+    const xAxisOptions = [], yAxisOptions = [];
+
+    for (const key in firstRow) {
+      if (typeof firstRow[key] === 'string') xAxisOptions.push(key);
+      if (typeof firstRow[key] === 'number') yAxisOptions.push(key);
+    }
+
+    return res.status(200).json({ data: true, xAxis: xAxisOptions, yAxis: yAxisOptions });
+
   } catch (e) {
+    console.error("FetchData error:", e.message);
     return res.status(500).json({ success: false, message: "Server error", error: e.message });
   }
-}
+};
 
 
 
+const getSingleExcelFile = async (req, res) => {
+  const { fileId } = req.params;
+
+  try {
+    const file = await ExcelDetails.findById(fileId);
+
+    if (!file) {
+      return res.status(404).json({ success: false, message: "File not found" });
+    }
+
+    return res.status(200).json({ success: true, data: file });
+  } catch (error) {
+    console.error("Error fetching file:", error);
+    return res.status(500).json({ success: false, message: "Server error", error });
+  }
+};
 
 
-
-export { uploadExcelFile, ExcelAllData, deleteExcelFile, ColoumnVisulize, userFileName, fetchData }
+export {analyzeData, uploadExcelFile,ExcelAllData, deleteExcelFile, getUserStats,ColoumnVisulize, userFileName, fetchData, getSingleExcelFile}
