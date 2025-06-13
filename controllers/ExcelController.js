@@ -30,6 +30,57 @@ const analyzeData = async (url) => {
 };
 
 
+const analyze3DData = async (req, res) => {
+  try {
+    const { url, xAxis, yAxis, zAxis } = req.body;
+
+    if (!url || !xAxis || !yAxis || !zAxis) {
+      return res.status(400).json({ success: false, message: "Missing required fields (url, xAxis, yAxis, zAxis)." });
+    }
+
+    
+    const response = await axios.get(url, { responseType: 'arraybuffer' });
+    const workbook = xlsx.read(response.data, { type: 'buffer' });
+
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+    const data = xlsx.utils.sheet_to_json(worksheet);
+
+    // Verify xAxis, yAxis, zAxis exist in the sheet columns
+    const firstRow = data[0] || {};
+    const availableColumns = Object.keys(firstRow);
+
+    const missingColumns = [xAxis, yAxis, zAxis].filter(col => !availableColumns.includes(col));
+    if (missingColumns.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Columns ${missingColumns.join(", ")} not found. Available columns: ${availableColumns.join(", ")}`
+      });
+    }
+
+    const processedData = data.map(row => ({
+      x: row[xAxis],
+      y: row[yAxis],
+      z: row[zAxis]
+    }));
+
+    return res.status(200).json({
+      success: true,
+      message: "3D data extracted successfully.",
+      processedData
+    });
+
+  } catch (e) {
+    console.error("Error analyzing 3D data:", e);
+    return res.status(500).json({
+      success: false,
+      message: "Server Error",
+      error: e.message
+    });
+  }
+};
+
+
 const ColoumnVisulize = async (url, xAxis, yAxis) => {
   try {
     // const { url, xAxis, yAxis } = req.body;
@@ -70,8 +121,8 @@ const uploadExcelFile = async (req, res) => {
     }
 
     const UserEmail = req.user.id;
-    const user = await userDetails.findOne({ email: UserEmail });
-    // const user = await userDetails.findById(UserEmail);
+    // const user = await userDetails.findOne({ email: UserEmail });
+    const user = await userDetails.findById(UserEmail);
 
     if (!user) {
       return res.status(404).json({ message: "User not found!" });
@@ -92,10 +143,12 @@ const uploadExcelFile = async (req, res) => {
     fs.unlinkSync(Files);
 
     const data = await analyzeData(ProfileFile);
+    console.log(data);
 
     const firstRow = data.Sheet1[0];
     const xAxis = []
     const yAxis = []
+   
 
     for (const key in firstRow) {
       if (typeof firstRow[key] == "string") {
@@ -105,6 +158,7 @@ const uploadExcelFile = async (req, res) => {
         yAxis.push(key)
       }
     }
+   let zAxis = [...yAxis];
 
     if (data) {
       const OverView = await OverViewOFFile(data);
@@ -117,7 +171,8 @@ const uploadExcelFile = async (req, res) => {
           asset_id: uploadFile.asset_id,
           ExcelData: data,
           xAxis,
-          yAxis
+          yAxis,
+          zAxis
         };
 
         const response = await ExcelDetails.create(ExcelData);
@@ -136,11 +191,12 @@ const uploadExcelFile = async (req, res) => {
           display_name: req.file.originalname,
           OverView: OverView.text,
           xAxis,
-          yAxis
+          yAxis,
+          zAxis
         });
       }
       else {
-        return res.status(400).json({ data: false })
+        return res.status(400).json({ data: false, })
       }
     }
 
@@ -216,6 +272,7 @@ const getUserStats = async (req, res) => {
       file.ExcelData && Object.keys(file.ExcelData).length > 0
     ).length;
 
+
     return res.status(200).json({
       success: true,
       totalFiles,
@@ -250,7 +307,7 @@ const userFileName = async (req, res) => {
     let FileName = {}
 
     FileName = ExcelData.map((data, index) => ({
-      "FileName": data.FileName, "_id": data._id,xAxis:data.xAxis,yAxis:data.yAxis
+      "FileName": data.FileName, "_id": data._id, xAxis: data.xAxis, yAxis: data.yAxis
     }))
 
     res.json({ data: true, FileName })
@@ -263,7 +320,6 @@ const userFileName = async (req, res) => {
 
 
 
-export {analyzeData, uploadExcelFile,ExcelAllData, deleteExcelFile, getUserStats}
 const fetchData = async (req, res) => {
   try {
     const { url, yAxis, xAxis } = req.body;
@@ -286,4 +342,4 @@ const fetchData = async (req, res) => {
 
 
 
-export { uploadExcelFile, ExcelAllData, deleteExcelFile, ColoumnVisulize, userFileName, fetchData }
+export { uploadExcelFile, ExcelAllData, deleteExcelFile, ColoumnVisulize, userFileName, fetchData, analyze3DData, getUserStats }
