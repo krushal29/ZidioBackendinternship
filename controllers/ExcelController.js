@@ -29,44 +29,112 @@ const analyzeData = async (url) => {
 };
 
 
-const analyze3DData = async (req, res) => {
-  try {
-    const { url, xAxis, yAxis, zAxis } = req.body;
+// const analyze3DData = async (req, res) => {
+//   try {
+//     const { url, xAxis, yAxis, zAxis } = req.body;
 
-    if (!url || !xAxis || !yAxis || !zAxis) {
-      return res.status(400).json({ success: false, message: "Missing required fields (url, xAxis, yAxis, zAxis)." });
-    }
+//     if (!url || !xAxis || !yAxis || !zAxis) {
+//       return res.status(400).json({ success: false, message: "Missing required fields (url, xAxis, yAxis, zAxis)." });
+//     }
 
     
+//     const response = await axios.get(url, { responseType: 'arraybuffer' });
+//     const workbook = xlsx.read(response.data, { type: 'buffer' });
+
+//     const sheetName = workbook.SheetNames[0];
+//     const worksheet = workbook.Sheets[sheetName];
+//     const data = xlsx.utils.sheet_to_json(worksheet);
+
+//     // Verify xAxis, yAxis, zAxis exist in the sheet columns
+//     const firstRow = data[0] || {};
+//     const availableColumns = Object.keys(firstRow);
+
+//     const missingColumns = [xAxis, yAxis, zAxis].filter(col => !availableColumns.includes(col));
+//     if (missingColumns.length > 0) {
+//       return res.status(400).json({
+//         success: false,
+//         message: `Columns ${missingColumns.join(", ")} not found. Available columns: ${availableColumns.join(", ")}`
+//       });
+//     }
+
+//     const processedData = data.map(row => ({
+//       x: row[xAxis],
+//       y: row[yAxis],
+//       z: row[zAxis]
+//     }));
+
+//     return res.status(200).json({
+//       success: true,
+//       message: "3D data extracted successfully.",
+//       processedData
+//     });
+
+//   } catch (e) {
+//     console.error("Error analyzing 3D data:", e);
+//     return res.status(500).json({
+//       success: false,
+//       message: "Server Error",
+//       error: e.message
+//     });
+//   }
+// };
+
+
+const analyze3DData = async (req, res) => {
+  try {
+    const { url, xAxis, yAxis, zAxis, useSyntheticZ } = req.body;
+
+    if (!url || !xAxis || !yAxis) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required fields (url, xAxis, yAxis)."
+      });
+    }
+
     const response = await axios.get(url, { responseType: 'arraybuffer' });
     const workbook = xlsx.read(response.data, { type: 'buffer' });
-
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
     const data = xlsx.utils.sheet_to_json(worksheet);
 
-    // Verify xAxis, yAxis, zAxis exist in the sheet columns
     const firstRow = data[0] || {};
     const availableColumns = Object.keys(firstRow);
 
-    const missingColumns = [xAxis, yAxis, zAxis].filter(col => !availableColumns.includes(col));
-    if (missingColumns.length > 0) {
+    const requiredCols = [xAxis, yAxis];
+    if (!useSyntheticZ) requiredCols.push(zAxis);
+
+    const missingCols = requiredCols.filter(col => !availableColumns.includes(col));
+    if (missingCols.length > 0) {
       return res.status(400).json({
         success: false,
-        message: `Columns ${missingColumns.join(", ")} not found. Available columns: ${availableColumns.join(", ")}`
+        message: `Missing columns: ${missingCols.join(", ")}. Available: ${availableColumns.join(", ")}`
       });
     }
 
-    const processedData = data.map(row => ({
+    // Step 1: Attempt to detect time-like column
+    let finalZAxis = zAxis;
+    if (useSyntheticZ) {
+      const timeLikeColumns = availableColumns.filter(col =>
+        /time|timestamp|date/i.test(col)
+      );
+      if (timeLikeColumns.length > 0) {
+        finalZAxis = timeLikeColumns[0]; // pick first time-like column
+        console.log(`Auto-selected Z-axis: ${finalZAxis}`);
+      }
+    }
+
+    // Step 2: Process the data
+    const processedData = data.map((row, index) => ({
       x: row[xAxis],
       y: row[yAxis],
-      z: row[zAxis]
+      z: finalZAxis ? row[finalZAxis] : index
     }));
 
     return res.status(200).json({
       success: true,
       message: "3D data extracted successfully.",
-      processedData
+      processedData,
+      usedZAxis: finalZAxis || "index"
     });
 
   } catch (e) {
@@ -78,6 +146,7 @@ const analyze3DData = async (req, res) => {
     });
   }
 };
+
 
 
 
@@ -380,8 +449,23 @@ const fetchData = async (req, res) => {
 }
 
 
+const getSingleExcelFile = async (req, res) => {
+  const { fileId } = req.params;
+
+  try {
+    const file = await ExcelDetails.findById(fileId);
+
+    if (!file) {
+      return res.status(404).json({ success: false, message: "File not found" });
+    }
+
+    return res.status(200).json({ success: true, data: file });
+  } catch (error) {
+    console.error("Error fetching file:", error);
+    return res.status(500).json({ success: false, message: "Server error", error });
+  }
+};
 
 
 
-
-export { uploadExcelFile, ExcelAllData, deleteExcelFile, ColoumnVisulize, userFileName, fetchData , getUserStats, analyze3DData}
+export { uploadExcelFile, ExcelAllData, deleteExcelFile, ColoumnVisulize, userFileName, fetchData , getUserStats, analyze3DData, getSingleExcelFile}

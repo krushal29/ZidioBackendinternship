@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { uploadExcelFile, ExcelAllData, deleteExcelFile, userFileName, fetchData, getUserStats, analyze3DData } from "../controllers/ExcelController.js";
+import { uploadExcelFile, ExcelAllData, deleteExcelFile, userFileName, fetchData, getUserStats, analyze3DData,ColoumnVisulize, getSingleExcelFile } from "../controllers/ExcelController.js";
 import upload from "../middleware/multer.js";
 import verifyToken from "../middleware/verifyToken.js";
 // import OverViewOFFile from "../controllers/AIController.js";
