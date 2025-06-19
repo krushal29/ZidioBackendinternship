@@ -259,7 +259,8 @@ const uploadExcelFile = async (req, res) => {
     await Report.create({
       title: req.file.originalname,
       description: `Uploaded by ${user.Name || user.email}`,
-      isReviewed: false
+       fileSize: uploadFile.bytes,
+     
     });
 
     return res.json({

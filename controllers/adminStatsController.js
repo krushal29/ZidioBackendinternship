@@ -3,14 +3,11 @@ import Session from '../models/SessionModel.js';
 
 export const getDashboardStats = async (req, res) => {
   try {
-    const reviewedCount = await Report.countDocuments({ isReviewed: true });
+    const totalFilesUploaded = await Report.countDocuments(); // 👈 All reports = all uploaded files
     const activeSessionCount = await Session.countDocuments({ isActive: true });
 
-    console.log("Reviewed Reports:", reviewedCount);
-    console.log("Active Sessions:", activeSessionCount);
-
     res.status(200).json({
-      reviewedReports: reviewedCount,
+      totalFiles: totalFilesUploaded,
       activeSessions: activeSessionCount,
     });
   } catch (error) {
