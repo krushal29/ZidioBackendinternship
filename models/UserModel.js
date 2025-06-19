@@ -21,7 +21,11 @@ const userSchema=new mongoose.Schema({
     isLogin:{
         type:Boolean,
         default:false
-    }
+    },
+    lastLogin: {
+  type: Date,
+  default: null
+}
 },{collection:"UserDetails"})
 
 

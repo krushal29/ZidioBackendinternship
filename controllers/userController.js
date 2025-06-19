@@ -19,38 +19,6 @@ const createToken = (user) => {
 };
 
 
-
-// const signup = async (req, res) => {
-//     try {
-//         const { UserName, UserEmail, Password } = req.body;
-//         if (!UserName || !UserEmail || !Password) return res.status(400).json({ data: false, message: "Please fill the details" });
-        
-//         const existingUser = await userDetails.findOne({ email: UserEmail });
-//         if (existingUser) {
-//             return res.status(400).json({ data: false, message: "user already exits.Please Try again!!!" });
-//         }
-        
-//         const hashedPassword = await bcrypt.hash(Password, 13);
-        
-//         const userData = {
-//             Name: UserName,
-//             email: UserEmail,
-//             Password: hashedPassword,
-//         }
-//         const user = await userDetails.create(userData);
-//         const token = createToken(user.email);
-//         if (!user) {
-//             return res.status(500).json({ data: false, message: "Failed to create user. Please try again later." });
-//         }
-//         else {
-//             await userDetails.updateOne({ email: UserEmail }, { isLogin: true });
-//             return res.status(200).json({ data: true, message: "Data added!!", token, role: user.role });
-//         }
-//     } catch (e) {
-//         return res.status(500).json({ data: false, message: "Server Error!", error: e })
-//     }
-// }
-
 const signup = async (req, res) => {
     try {
         const { UserName, UserEmail, Password } = req.body;
@@ -99,94 +67,110 @@ const signup = async (req, res) => {
 };
 
 
+
 // const login = async (req, res) => {
 //   try {
-//         const { Email, Password } = req.body;
+//     const { Email, Password } = req.body;
+//     if (!Email || !Password)
+//       return res.status(400).json({ data: false, message: "Please Fill all the Fields" });
 
-//         if (!Email || !Password) return res.status(400).json({ data: false, message: "Please Fill all the Fields" });
+//     const user = await userDetails.findOne({ email: Email });
+//     if (!user)
+//       return res.status(404).json({ data: false, message: "User not found" });
 
-//         const user = await userDetails.findOne({ email: Email });
+//     const ComparePassword = await bcrypt.compare(Password, user.Password);
+//     if (!ComparePassword)
+//       return res.status(401).json({ data: false, message: "Invalid password" });
 
-//         if (user) {
-//             const ComparePassword = await bcrypt.compare(Password, user.Password);
-//             if (ComparePassword) {
-//                 const token = createToken(user._id);
-//                 await userDetails.updateOne({ email: Email }, { isLogin: true });
-//                 return res.status(200).json({ data: true, message: "login Successfull", token, role: user.role });
-//             } else {
-//                 return res.status(401).json({ data: false, message: "Incorrect password" })
-//             }
+//     const token = createToken(user); 
 
-//         } else {
-//             return res.status(404).json({ data: false, message: "User not found" });
-//         }
-//     } catch (e) {
-//         return res.status(500).json({ data: false, message: "Server Error.Please try again", error: e.message });
-//     }
-// }
+//     const updatedUser = await userDetails.findOneAndUpdate(
+//       { email: Email },
+//       { isLogin: true, lastLogin: new Date() },
+//       { new: true }
+//     );
 
+//     await Session.findOneAndUpdate(
+//       { userId: user._id },
+//       { isActive: true, lastLogin: new Date() },
+//       { upsert: true, new: true }
+//     );
+
+//     return res.status(200).json({
+//       data: true,
+//       message: "login Successful",
+//       token,
+//       role: updatedUser.role,
+//       user: {
+//         name: updatedUser.Name,
+//         email: updatedUser.email,
+//         lastLogin: updatedUser.lastLogin,
+//       },
+//     });
+//   } catch (e) {
+//     return res.status(500).json({
+//       data: false,
+//       message: "Server Error. Please try again",
+//       error: e.message,
+//     });
+//   }
+// };
 
 
 const login = async (req, res) => {
-    try {
-        const { Email, Password } = req.body;
-        console.log("Login body:", req.body);
+  try {
+    const { Email, Password } = req.body;
+
+    if (!Email || !Password)
+      return res.status(400).json({ data: false, message: "Please Fill all the Fields" });
+
+    const user = await userDetails.findOne({ email: Email });
+    if (!user)
+      return res.status(404).json({ data: false, message: "User not found" });
+
+    const ComparePassword = await bcrypt.compare(Password, user.Password);
+    if (!ComparePassword)
+      return res.status(401).json({ data: false, message: "Invalid password" });
+
+    const token = createToken(user);
+
+    // ✅ Store previous lastLogin before update
+    const previousLogin = user.lastLogin;
+
+    // ✅ Update login status and current login time
+    await userDetails.findOneAndUpdate(
+      { email: Email },
+      { isLogin: true, lastLogin: new Date() },
+      { new: true }
+    );
+
+    await Session.findOneAndUpdate(
+      { userId: user._id },
+      { isActive: true, lastLogin: new Date() },
+      { upsert: true, new: true }
+    );
+
+    return res.status(200).json({
+      data: true,
+      message: "login Successful",
+      token,
+      role: user.role,
+      user: {
+        name: user.Name,
+        email: user.email,
+        lastLogin: previousLogin, 
+      },
+    });
+  } catch (e) {
+    return res.status(500).json({
+      data: false,
+      message: "Server Error. Please try again",
+      error: e.message,
+    });
+  }
+};
 
 
-        if (!Email || !Password) return res.status(400).json({ data: false, message: "Please Fill all the Fields" });
-
-        const user = await userDetails.findOne({ email: Email });
-        const ComparePassword = await bcrypt.compare(Password, user.Password);
-
-
-        if (ComparePassword) {
-  // const token = createToken(user._id);
-  const token = createToken(user); 
-
-  await userDetails.updateOne({ email: Email }, { isLogin: true });
-
-  await Session.findOneAndUpdate(
-  { userId: user._id },
-  { isActive: true, lastLogin: new Date() },
-  { upsert: true, new: true }
-);
-
-  
-  return res.status(200).json({
-    data: true,
-    message: "login Successful",
-    token,
-    role: user.role,
-    user: {
-      name: user.Name,   
-      email: user.email,
-    }
-  });
-}
- else {
-            return res.status(404).json({ data: false, message: "User not found" });
-        }
-    } catch (e) {
-        return res.status(500).json({ data: false, message: "Server Error. Please try again", error: e.message });
-    }
-}
-
-
-
-// const forgotPassword = async (req, res) => {
-//     try {
-//         const { FormData } = req.body;
-//         if (!(FormData.password === FormData.confirmPassword)) return res.status(201).json({ data: false, message: "Password does not Same!!!" });
-
-//         const hashedPassword = await bcrypt.hash(FormData.password, 13);
-
-//         await userDetails.updateOne({ email: FormData.email }, { Password: hashedPassword })
-
-//         return res.status(200).json({ data: true });
-//     } catch (e) {
-//         return res.status(500).json({ data: false, message: "Server Error", error: e })
-//     }
-// }
 
 const forgotPassword = async (req, res) => {
   try {
@@ -229,9 +213,13 @@ const logout = async (req, res) => {
     }
 }
 
+
 const getUserProfile = async (req, res) => {
   try {
-    const user = await userDetails.findById(req.user.id).select('Name email');
+    const user = await userDetails
+      .findById(req.user.id)
+      .select('Name email lastLogin'); 
+
     if (!user) return res.status(404).json({ message: 'User not found' });
 
     return res.status(200).json({ user });
@@ -239,6 +227,8 @@ const getUserProfile = async (req, res) => {
     return res.status(500).json({ message: 'Failed to fetch user profile', error: error.message });
   }
 };
+
+
 
 const changePassword = async(req, res)=>{
    const { oldPassword, newPassword } = req.body;
