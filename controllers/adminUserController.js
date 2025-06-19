@@ -1,6 +1,6 @@
 import userDetails from '../models/UserModel.js';
 
-// Get all users
+
 export const getAllUsers = async (req, res) => {
 
     console.log("Fetching users...");
