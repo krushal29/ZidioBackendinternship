@@ -10,6 +10,7 @@ import connectCloudinary from './Config/cloudinary.js';
 import session from 'express-session';
 import passport from 'passport';
 import './Config/passport.js';
+import GraphRoute from './routes/Graph.js';
 
 
 
@@ -41,6 +42,7 @@ connectCloudinary();
 app.use('/api/user',userRoute);
 app.use('/api/excel',ExcelRouter);
 app.use('/api/admin', adminRoute);
+app.use('/api/graph',GraphRoute);
 
 
 

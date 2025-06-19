@@ -16,7 +16,7 @@ const createToken = (admin) => {
 };
 
 const adminSignup = async (req, res) => {
-    console.log("Incoming data:", req.body);
+  console.log("Incoming data:", req.body);
   try {
     const { AdminName, AdminEmail, Password } = req.body;
 
@@ -125,4 +125,19 @@ const reviewReport = async (req, res) => {
 };
 
 
-export { adminSignup, adminLogin, adminLogout, getAllReports, reviewReport };
+const filterFile = async (req, res) => {
+  try {
+    const { name } = req.body;
+    const reports = await Report.find();
+
+    const filterReport = reports.filter((val) => val.description.split(" ")[2].includes(name))
+   
+
+    res.status(200).json({ filterReport });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch reports' });
+  }
+}
+
+
+export { adminSignup, adminLogin, adminLogout, getAllReports, reviewReport, filterFile };
