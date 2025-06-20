@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import adminDetails from '../models/AdminModel.js';
 import Report from '../models/ReportModel.js';
+import userDetails from '../models/UserModel.js';
 
 const createToken = (admin) => {
   return jwt.sign(
@@ -140,5 +141,54 @@ const filterFile = async (req, res) => {
   }
 }
 
+const getReportsByUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    console.log('Fetching reports for user:', userId);
 
-export { adminSignup, adminLogin, adminLogout, getAllReports, reviewReport, filterFile };
+    const reports = await Report.find({ userId }).sort({ createdAt: -1 });
+
+    if (!reports.length) {
+      return res.status(404).json({ data: false, message: 'No reports found for this user' });
+    }
+
+    res.status(200).json({ data: true, reports });
+  } catch (error) {
+    res.status(500).json({ data: false, message: 'Failed to fetch reports', error });
+  }
+};
+
+
+const getReportsByUserName = async (req, res) => {
+  const { username } = req.params;
+  console.log("🔍 Searching reports for username:", username);
+
+  try {
+    
+    if (!username) {
+      return res.status(400).json({ data: false, message: "Username is required" });
+    }
+
+    const user = await userDetails.findOne({ Name: username });
+
+    if (!user) {
+      return res.status(404).json({ data: false, message: "User not found" });
+    }
+
+    const reports = await Report.find({ userId: user._id }).sort({ createdAt: -1 });
+
+    if (reports.length === 0) {
+      return res.status(404).json({ data: false, message: "No reports found for this user" });
+    }
+
+    return res.status(200).json({ data: true, reports });
+
+  } catch (error) {
+    return res.status(500).json({ data: false, message: 'Server error', error: error.message });
+  }
+};
+
+
+
+
+export { adminSignup, adminLogin, adminLogout, getAllReports, reviewReport, filterFile, getReportsByUser, getReportsByUserName};

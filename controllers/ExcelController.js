@@ -262,6 +262,8 @@ const uploadExcelFile = async (req, res) => {
       title: req.file.originalname,
       description: `Uploaded by ${user.Name || user.email}`,
        fileSize: uploadFile.bytes,
+      //  userId: req.user.id,
+      userId: user._id
      
     });
 

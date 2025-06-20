@@ -53,6 +53,7 @@ const CountGraph = async (req, res) => {
 
 const getCountGraph=async(req,res)=>{
     try{
+        
         const GraphCountData=await GraphDetails.find({});
         return res.status(200).json({data:true,message:GraphCountData})
     }catch(e){

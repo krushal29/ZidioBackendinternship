@@ -31,6 +31,12 @@ const signup = async (req, res) => {
             return res.status(400).json({ data: false, message: "User already exists. Please try again!" });
         }
 
+        const existingName = await userDetails.findOne({ Name: UserName });
+if (existingName) {
+  return res.status(400).json({ data: false, message: "Name already taken. Please choose a different name." });
+}
+
+
         const hashedPassword = await bcrypt.hash(Password, 13);
 
         const userData = {

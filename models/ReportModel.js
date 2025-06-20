@@ -5,9 +5,14 @@ const reportSchema = new mongoose.Schema({
   title: String,
   description: String,
   isReviewed: { type: Boolean, default: false },
-  fileSize: Number, // <-- Add this field
+  fileSize: Number,
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'user',
+    required: true
+  },
 }, {
-  timestamps: true, // ensures createdAt is available
+  timestamps: true,
 });
 
 const Report = mongoose.model('Report', reportSchema);

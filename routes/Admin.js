@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { adminSignup, adminLogin, adminLogout, getAllReports, reviewReport, filterFile } from '../controllers/adminController.js';
+import { adminSignup, adminLogin, adminLogout, getAllReports, reviewReport, filterFile, getReportsByUser, getReportsByUserName } from '../controllers/adminController.js';
 import { getAllUsers, updateUser, deleteUser } from '../controllers/adminUserController.js';
 import { getDashboardStats } from '../controllers/adminStatsController.js';
 import verifyToken from '../middleware/verifyToken.js';
@@ -21,5 +21,9 @@ adminRoute.get('/dashboard-stats', verifyToken, getDashboardStats);
 
 adminRoute.get('/reports', getAllReports);
 adminRoute.put('/reports/:id/review', reviewReport);
+
+adminRoute.get('/reports/user/:userId',verifyToken, getReportsByUser);
+adminRoute.get('/reports/by-username/:username', getReportsByUserName);
+
 
 export default adminRoute;
