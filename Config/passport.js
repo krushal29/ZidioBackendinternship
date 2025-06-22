@@ -9,7 +9,7 @@ passport.use(new GoogleStrategy(
   {
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: "http://localhost:80/api/user/google/callback"
+    callbackURL: `${process.env.BACKEND_URl}/api/user/google/callback`
   },
   async (accessToken, refreshToken, profile, done) => {
     const email = profile.emails?.[0]?.value;
@@ -35,7 +35,7 @@ passport.use(new GoogleStrategy(
 passport.use(new GitHubStrategy({
   clientID: process.env.GITHUB_CLIENT_ID,
   clientSecret: process.env.GITHUB_CLIENT_SECRET,
-  callbackURL: "http://localhost:80/api/user/github/callback",
+  callbackURL: `${process.env.BACKEND_URl}/api/user/github/callback`,
   scope: ['user:email']
 }, async (accessToken, refreshToken, profile, done) => {
 //   const email = profile.emails?.[0]?.value || `${profile.username}@github.com`;

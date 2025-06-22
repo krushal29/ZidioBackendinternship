@@ -33,7 +33,7 @@ userRoute.get('/google/callback', passport.authenticate('google', {
   process.env.JWT_TOKEN_KEY
 );
 
-  res.redirect(`http://localhost:5173/oauth-success?token=${token}&name=${req.user.Name}&email=${req.user.email}`);
+  res.redirect(`${process.env.FRONTEND_URL}/oauth-success?token=${token}&name=${req.user.Name}&email=${req.user.email}`);
 });
 
 userRoute.get('/github', passport.authenticate('github', { scope: ['user:email'] }));
@@ -52,7 +52,7 @@ userRoute.get('/github/callback', passport.authenticate('github', {
   process.env.JWT_TOKEN_KEY
 );
 
-  res.redirect(`http://localhost:5173/oauth-success?token=${token}&name=${req.user.Name}&email=${req.user.email}`);
+  res.redirect(`${process.env.FRONTEND_URL}/oauth-success?token=${token}&name=${req.user.Name}&email=${req.user.email}`);
 });
 
 export default userRoute;
