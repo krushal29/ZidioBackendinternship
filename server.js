@@ -14,7 +14,8 @@ import GraphRoute from './routes/Graph.js';
 
 
 
-const port=80
+// const port=80
+const port = process.env.PORT || 4000 
 const app=express();
 
 
