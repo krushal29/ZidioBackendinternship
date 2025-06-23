@@ -53,7 +53,6 @@
 // })
 
 
-
 import express from 'express';
 import connectDB from './Config/mongo.js';
 import dotenv from 'dotenv';
@@ -68,61 +67,58 @@ import passport from 'passport';
 import './Config/passport.js';
 import GraphRoute from './routes/Graph.js';
 
-// Port config
-const port = process.env.PORT || 4000;
 const app = express();
+const port = process.env.PORT || 4000;
 
-// CORS configuration
+
 const allowedOrigins = [
-  'https://excelflow.netlify.app',  // Your frontend production URL
-  'http://localhost:5173'            // Your local frontend URL (Vite dev server)
+  'https://excelflow.netlify.app',  // production frontend
+  'http://localhost:5173'           // local dev frontend
 ];
 
+
 app.use(cors({
-  origin: function(origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) === -1) {
-      const msg = `The CORS policy for this site does not allow access from the specified Origin: ${origin}`;
-      return callback(new Error(msg), false);
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true); 
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    } else {
+      return callback(new Error(`CORS error: ${origin} is not allowed.`));
     }
-    return callback(null, true);
   },
-  credentials: true,  // Allow cookies, authorization headers, TLS client certificates
+  credentials: true
 }));
 
-// To handle preflight OPTIONS requests for all routes
-app.options('*', cors({
-  origin: allowedOrigins,
-  credentials: true,
-}));
 
-// Body parsers
+app.options('*', cors());
+
+
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// Session setup
+
 app.use(session({
   secret: 'someSecretKey',
   resave: false,
-  saveUninitialized: true,
+  saveUninitialized: true
 }));
 
-// Passport initialization
+
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Database and Cloudinary connection
+
 connectDB();
 connectCloudinary();
 
-// API routes
+
 app.use('/api/user', userRoute);
-app.use('/api/excel', ExcelRouter);
 app.use('/api/admin', adminRoute);
+app.use('/api/excel', ExcelRouter);
 app.use('/api/graph', GraphRoute);
 
-// Start server
+
 app.listen(port, () => {
-  console.log(`server is running on port ${port}`);
+  console.log(`Server is running on port ${port}`);
 });
+
